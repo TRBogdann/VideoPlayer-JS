@@ -1,0 +1,61 @@
+ <!DOCTYPE html>
+ <html lang="en">
+ <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="2_1101_trascau_teodor_bogdan.css"></link>
+ </head>
+ <body>
+<div class="effectsBar">
+<div class="effectsControl">
+<div class="effButton">Effects &#8964</div>
+<ul class="effectPicker">
+</ul>
+</div>
+<div class="addvideo">
+<div class="avButton">Add Video &#8964</div>
+<form>
+<div>
+<label for="videoname">Video Name</label>
+<input type="text" name="videoname" id="videoname" accept="video/*"/>
+</div>
+<div>
+<label for="videofile">Video</label>
+<input type="file" name="videofile" id="videodata" accept="video/*"/>
+</div>
+<div>
+<label for="srtfile" >Subtitles</label>
+<input type="file" id="videosub" name="srtfile"/>
+</div>
+<input type="submit" value="Add Video" id="videobutton"/>
+</form>
+</div>
+<div class="settings">
+<div class="sButton">Settings &#8964</div>
+<form>
+<div>
+<label  for="checkSub">Subtitles</label>
+<input type="checkbox" name="checkSub" class="togSub">
+</div>
+<div>
+<label for="checkAuto">Autoplay</label>
+<input type="checkbox" name="checkAuto" class="togAuto">
+</div>
+</form>
+</div>
+<div class="playlist">
+<div class="currently">Curretly Playing : Dummy Video - By Idk &#8964</div>
+<div class="container">
+</div>
+</div>
+</div>
+
+<div class="playerContainer">
+<canvas class="player"></canvas>
+</div>
+
+
+<script src="2_1101_trascau_teodor_bogdan.js"></script>
+ </body>
+ </html>
