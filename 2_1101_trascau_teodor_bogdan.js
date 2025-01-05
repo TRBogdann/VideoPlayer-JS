@@ -34,11 +34,54 @@ function shuffle(array) {
     }
   }
 
+  function heat(value) {
+    const growth = 255 / 4;
+    const normalized = value / growth; 
+    let r = 0, g = 0, b = 0;
+
+    if (normalized < 1) {
+        b = 255;
+        g = Math.round(255 * normalized);
+    } else if (normalized < 2) {
+        b = 255 - Math.round(255 * (normalized - 1));
+        g = 255;
+    } else if (normalized < 3) {
+        g = 255;
+        r = Math.round(255 * (normalized - 2));
+    } else {
+        g = 255 - Math.round(255 * (normalized - 3));
+        r = 255;
+    }
+
+    return [r, g, b];
+}
+
+function linearIndex(i,j,width,height)
+{
+    return i*width+j;
+}
+
 function applyEffect(image,effect)
 {
     switch(effect)
     {
         
+        case 'heatmap':{
+            const data = image.data;
+            const mat = [];
+            for(let i=0; i<data.length; i+=4)
+            {
+                let s = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2]; 
+                let vec = heat(s);
+                data[i] = vec[0];
+                data[i+1] = vec[1];
+                data[i+2] = vec[2];
+            };
+
+
+        }
+            break;
+
         case 'greyscale':{
             const data = image.data;
 
@@ -50,6 +93,222 @@ function applyEffect(image,effect)
         }
         break;
 
+        //Inpiratie 3blue1brown
+        //Nota catre sine: kernel utilizat pentru copnvolutie
+        //   b  null r
+        // 0.25  0  -0.25
+        // 0.5   0  -0.5
+        // 0.25  0  -0.25 
+        case '3D':
+        {
+            const data = image.data;
+
+            let vec = [];
+            
+            for(let i=4;i<image.height*4-4;i+=4)
+                for(let j=4;j<image.width*4-4;j+=4)
+            {
+                let indexes = [
+                    linearIndex(i-4,j-4,image.width),linearIndex(i-4,j+4,image.width),
+                    linearIndex(i,j-4,image.width),linearIndex(i,j+4,image.width),
+                    linearIndex(i+4,j-4,image.width),linearIndex(i+4,j+4,image.width)
+                ]
+
+                let strenght = [
+                    0.25,-0.25,
+                    0.5,-0.5,
+                    0.25,-0.25
+                ]
+                let s = 0;
+                for(let k=0;k<6;k++)
+                {
+                    s += strenght[k]*(0.299*data[indexes[k]] + 0.587*data[indexes[k]+1] + 0.114*data[indexes[k]+2]);
+                }
+                vec.push(s);
+            }
+            let pos = 0;
+            
+            for(let i=0;i<image.height*4;i+=4)
+                for(let j=0;j<image.width*4;j+=4)
+            {
+                const index = linearIndex(i,j,image.width);
+                if(i==0 || j==0 || i==image.height*4-4 || j==image.width*4-4)
+                {
+                    data[index] = 0;
+                    data[index+1] = 0;
+                    data[index+2] = 0
+                }
+                
+                else {
+                if(vec[pos]<0){
+                    data[index] = -vec[pos];
+                    data[index+1] = 0;
+                    data[index+2] = 0
+                }
+                else
+                {
+                    data[index] = 0;
+                    data[index+1] = 0;
+                    data[index+2] = vec[pos];
+                }
+                pos++;
+            }
+            }
+
+        }
+        break;
+
+        case 'emboss':
+        {
+            const data = image.data;
+
+            let vec = [];
+            
+            for(let i=4;i<image.height*4-4;i+=4)
+                for(let j=4;j<image.width*4-4;j+=4)
+            {
+                let indexes = [
+                    linearIndex(i-4,j-4,image.width),linearIndex(i-4,j,image.width),
+                    linearIndex(i,j-4,image.width),linearIndex(i,j,image.width),linearIndex(i,j+4,image.width),
+                    linearIndex(i+4,j,image.width),linearIndex(i+4,j+4,image.width)
+                ]
+
+                let strenght = [
+                    -2,-1,
+                    -1,1,1,
+                     1,2
+                ]
+                let r=0,b=0;g=0;
+                for(let k=0;k<7;k++)
+                {
+                    r += strenght[k]*data[indexes[k]];
+                    g += strenght[k]*data[indexes[k]+1];
+                    b += strenght[k]*data[indexes[k]+2];
+                }
+                vec.push(r);
+                vec.push(g);
+                vec.push(b);
+            }
+
+            pos = 0;
+            for(let i=0;i<image.height*4;i+=4)
+                for(let j=0;j<image.width*4;j+=4)
+            {
+                const index = linearIndex(i,j,image.width);
+                if(i==0 || j==0 || i==image.height*4-4 || j==image.width*4-4)
+                {
+                    data[index] = 0;
+                    data[index+1] = 0;
+                    data[index+2] = 0
+                }
+
+                else{
+                let index = linearIndex(i,j,image.width)
+                data[index] = vec[pos]
+                data[index+1] = vec[pos+1]
+                data[index+2] = vec[pos+2]
+                pos+=3;
+                }
+            }
+        
+        }
+        break;
+
+            case 'gaussianBlur':
+                {
+                    const data = image.data;
+        
+                    let vec = [];
+                    
+                    for(let i=4;i<image.height*4-4;i+=4)
+                        for(let j=4;j<image.width*4-4;j+=4)
+                    {
+                        let indexes = [
+                            linearIndex(i-4,j-4,image.width),linearIndex(i-4,j,image.width),linearIndex(i-4,j+4,image.width),
+                            linearIndex(i,j-4,image.width),linearIndex(i,j,image.width),linearIndex(i,j+4,image.width),
+                            linearIndex(i+4,j,image.width),linearIndex(i+4,j,image.width),linearIndex(i+4,j+4,image.width)
+                        ]
+        
+
+                        let strenght = [
+                            0.0625 ,0.125, 0.0625 ,
+                            0.125,0.25,0.125,
+                            0.0625 ,0.125, 0.0625 
+                        ]
+                        let r=0,b=0;g=0;
+                        for(let k=0;k<9;k++)
+                        {
+                            r += strenght[k]*data[indexes[k]];
+                            g += strenght[k]*data[indexes[k]+1];
+                            b += strenght[k]*data[indexes[k]+2];
+                        }
+                        data[indexes[5]] = r;
+                        data[indexes[5]+1] = g;
+                        data[indexes[5]+2] = b;
+                    }
+                
+                }
+                break;
+    
+         case 'edgeDetection':
+                    {
+                        const data = image.data;
+            
+                        let vec = [];
+                        
+                        for(let i=4;i<image.height*4-4;i+=4)
+                            for(let j=4;j<image.width*4-4;j+=4)
+                        {
+                            let indexes = [
+                                linearIndex(i-4,j-4,image.width),linearIndex(i-4,j,image.width),linearIndex(i-4,j+4,image.width),
+                                linearIndex(i,j-4,image.width),linearIndex(i,j,image.width),linearIndex(i,j+4,image.width),
+                                linearIndex(i+4,j,image.width),linearIndex(i+4,j,image.width),linearIndex(i+4,j+4,image.width)
+                            ]
+            
+                            let strenght = [
+                                0,1,0,
+                                1,-4,1,
+                                0,1,0
+                            ]
+    
+                            let r=0,b=0;g=0;
+                            for(let k=0;k<9;k++)
+                            {
+                                r += strenght[k]*data[indexes[k]];
+                                g += strenght[k]*data[indexes[k]+1];
+                                b += strenght[k]*data[indexes[k]+2];
+                            }
+                            vec.push(r)
+                            vec.push(g)
+                            vec.push(b)
+                        }
+    
+                        pos = 0;
+                        for(let i=0;i<image.height*4;i+=4)
+                            for(let j=0;j<image.width*4;j+=4)
+                        {
+                            const index = linearIndex(i,j,image.width);
+                            if(i==0 || j==0 || i==image.height*4-4 || j==image.width*4-4)
+                            {
+                                data[index] = 0;
+                                data[index+1] = 0;
+                                data[index+2] = 0
+                            }
+
+                            else{
+                            let index = linearIndex(i,j,image.width)
+                            data[index] = vec[pos]
+                            data[index+1] = vec[pos+1]
+                            data[index+2] = vec[pos+2]
+                            pos+=3;
+                            }
+                        }
+                    
+                    }
+    
+    
+                    break;
+
         case 'threshold':{
             let th = 255/2;
             const data = image.data;
@@ -58,8 +317,8 @@ function applyEffect(image,effect)
             {
                 let s = 0.2126*data[i] + 0.7152*data[i+1] + 0.0722*data[i+2];
                 data[i]=data[i+1]=data[i+2]= s<th? 0:255;
-    
             };
+
         }
             break;
         
@@ -112,7 +371,7 @@ function applyEffect(image,effect)
 
             break;
 
-        case 'feverdream':
+        case 'iDontKnow':
         {
             const data = image.data;
 
@@ -129,12 +388,13 @@ function applyEffect(image,effect)
                 if(mx<b)
                     mx = b;
                 
-                let dif = 255-mx;
+                let dif = 0.9*(255-mx);
                 data[i] = data[i] + dif;
                 data[i+1] = data[i+1] + dif;
                 data[i+2] = data[i+2] + dif;
             };
         }
+
             break;
         default:
     }
@@ -997,7 +1257,7 @@ class VideoPlayer
         this.#mousedown = false;
         this.#autoplay = false;
         
-        let effects = ['greyscale','threshold','invert','sepia','noise','feverdream']
+        let effects = ['normal','heatmap','greyscale','threshold','invert','sepia','noise','iDontKnow','3D','emboss','edgeDetection','gaussianBlur']
         const effectPicker = document.querySelector(".effectPicker");
         for(let it of effects)
         {
